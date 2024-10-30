@@ -21,9 +21,12 @@ type Weather struct {
 	Name string `json:"name"`
 }
 
-func main() {
+type Coord struct {
+	Lat  float64 `json:"lat"`
+	Long float64 `json:"lon"`
+}
 
-	// place := "Boston"
+func main() {
 
 	load := godotenv.Load()
 	if load != nil {
@@ -31,12 +34,42 @@ func main() {
 	}
 
 	key := os.Getenv("API_KEY")
-	/*
-		if len(os.Args) >= 2 {
-			place = os.Args[1]
+	lat := "42.3611"
+	lon := "-71.0570"
+
+	// Use Geocoder API to get lat and long of place in args if longer than 2
+
+	if len(os.Args) >= 2 {
+		place := os.Args[1]
+
+		res, err := http.Get("http://api.openweathermap.org/geo/1.0/direct?q=" + place + "&limit=5&appid=" + key)
+		if err != nil {
+			panic(err)
+
 		}
-	*/
-	res, err := http.Get("http://api.openweathermap.org/data/2.5/weather?lat=42.3611&lon=-71.0570&appid=" + key)
+		defer res.Body.Close()
+
+		if res.StatusCode != 200 {
+			panic("API not available")
+
+		}
+
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			panic(err)
+		}
+		var coords []Coord
+
+		err = json.Unmarshal(body, &coords)
+		if err != nil {
+			panic(err)
+		}
+
+		lat, lon = fmt.Sprintf("%f", coords[0].Lat), fmt.Sprintf("%f", coords[0].Long)
+
+	}
+
+	res, err := http.Get("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon + "&appid=" + key)
 	if err != nil {
 		panic(err)
 
@@ -59,9 +92,9 @@ func main() {
 		panic(err)
 	}
 
-	degrees, name := weather.Main.Temperature, weather.Name
+	degrees, name := (weather.Main.Temperature-273.15)*1.8+32, weather.Name
 
-	fmt.Printf("%s, %.0fK \n",
+	fmt.Printf("%s, %.0fF \n",
 		name,
 		degrees,
 	)

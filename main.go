@@ -6,7 +6,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
+	"github.com/guptarohit/asciigraph"
 	"github.com/joho/godotenv"
 )
 
@@ -19,6 +21,31 @@ type Weather struct {
 		Temperature float64 `json:"temp"`
 	} `json:"main"`
 	Name string `json:"name"`
+}
+
+type WeatherResponse struct {
+	Cod     string        `json:"cod"`
+	Message int           `json:"message"`
+	Cnt     int           `json:"cnt"`
+	List    []WeatherData `json:"list"`
+}
+
+type WeatherData struct {
+	Dt      int64              `json:"dt"`
+	Main    MainInfo           `json:"main"`
+	Weather []WeatherCondition `json:"weather"`
+}
+
+type MainInfo struct {
+	Temp      float64 `json:"temp"`
+	FeelsLike float64 `json:"feels_like"`
+}
+
+type WeatherCondition struct {
+	Id          int    `json:"id"`
+	Main        string `json:"main"`
+	Description string `json:"description"`
+	Icon        string `json:"icon"`
 }
 
 type Coord struct {
@@ -36,13 +63,14 @@ func main() {
 	key := os.Getenv("API_KEY")
 	lat := "42.3611"
 	lon := "-71.0570"
+	place := "Boston"
 
 	// Use Geocoder API to get lat and long of place in args if longer than 2
 
 	if len(os.Args) >= 2 {
-		place := os.Args[1]
+		place := os.Args[1:]
 
-		res, err := http.Get("http://api.openweathermap.org/geo/1.0/direct?q=" + place + "&limit=5&appid=" + key)
+		res, err := http.Get("http://api.openweathermap.org/geo/1.0/direct?q=" + strings.Join(place, "_") + "&limit=5&appid=" + key)
 		if err != nil {
 			panic(err)
 
@@ -69,7 +97,7 @@ func main() {
 
 	}
 
-	res, err := http.Get("http://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon + "&appid=" + key)
+	res, err := http.Get("http://api.openweathermap.org/data/2.5/forecast?lat=" + lat + "&lon=" + lon + "&appid=" + key)
 	if err != nil {
 		panic(err)
 
@@ -86,17 +114,19 @@ func main() {
 		panic(err)
 	}
 
-	var weather Weather
-	err = json.Unmarshal(body, &weather)
+	var response WeatherResponse
+	err = json.Unmarshal(body, &response)
 	if err != nil {
 		panic(err)
 	}
 
-	degrees, name := (weather.Main.Temperature-273.15)*1.8+32, weather.Name
+	var temps []float64
+	for _, weather := range response.List {
+		temps = append(temps, (weather.Main.Temp-273.15)*1.8+32)
+	}
 
-	fmt.Printf("%s, %.0fF \n",
-		name,
-		degrees,
-	)
+	graph := asciigraph.Plot(temps)
+	fmt.Println(place, "\n")
+	fmt.Println(graph)
 
 }

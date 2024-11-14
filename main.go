@@ -63,7 +63,7 @@ func main() {
 	key := os.Getenv("API_KEY")
 	lat := "42.3611"
 	lon := "-71.0570"
-	place := "Boston"
+	defaultPlace := "Boston"
 
 	// Use Geocoder API to get lat and long of place in args if longer than 2
 
@@ -126,7 +126,12 @@ func main() {
 	}
 
 	graph := asciigraph.Plot(temps)
-	fmt.Println(place, "\n")
-	fmt.Println(graph)
+
+	if len(os.Args) >= 2 {
+		place := os.Args[1:]
+		fmt.Println(strings.Join(place, "_"), "\n", graph)
+	} else {
+		fmt.Println(defaultPlace, "\n", graph)
+	}
 
 }

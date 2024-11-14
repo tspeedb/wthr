@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -63,14 +64,16 @@ func main() {
 	key := os.Getenv("API_KEY")
 	lat := "42.3611"
 	lon := "-71.0570"
-	defaultPlace := "Boston"
+
+	var place string
+	flag.StringVar(&place, "place", "Boston", "Place string for desired weather")
+	flag.Parse()
 
 	// Use Geocoder API to get lat and long of place in args if longer than 2
 
 	if len(os.Args) >= 2 {
-		place := os.Args[1:]
 
-		res, err := http.Get("http://api.openweathermap.org/geo/1.0/direct?q=" + strings.Join(place, "_") + "&limit=5&appid=" + key)
+		res, err := http.Get("http://api.openweathermap.org/geo/1.0/direct?q=" + strings.ReplaceAll(place, " ", "") + "&limit=5&appid=" + key)
 		if err != nil {
 			panic(err)
 
@@ -91,6 +94,10 @@ func main() {
 		err = json.Unmarshal(body, &coords)
 		if err != nil {
 			panic(err)
+		}
+
+		if len(coords) == 0 {
+			panic("Invalid location")
 		}
 
 		lat, lon = fmt.Sprintf("%f", coords[0].Lat), fmt.Sprintf("%f", coords[0].Long)
@@ -127,11 +134,6 @@ func main() {
 
 	graph := asciigraph.Plot(temps)
 
-	if len(os.Args) >= 2 {
-		place := os.Args[1:]
-		fmt.Println(strings.Join(place, "_"), "\n", graph)
-	} else {
-		fmt.Println(defaultPlace, "\n", graph)
-	}
+	fmt.Print(place, "\n", graph, "\n")
 
 }
